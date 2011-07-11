@@ -90,11 +90,22 @@ sub stackato_json {
 }
 
 sub get_info {
-    return dot_stackato() || die "No stackato app pushed from this directory";
+    my $info = dot_stackato() || die "No stackato app pushed from this directory";
+    my $fast = shift;
+    unless ($fast) {
+	my $apps = stackato_json("apps");
+	for my $app (@$apps) {
+	    if ($app->{name} eq $info->{appname}) {
+		$info->{deployed} = $app;
+		last;
+	    }
+	}
+    }
+    return $info;
 }
 
 sub get_appname {
-    return get_info()->{appname} || die "Assert";
+    return get_info(1)->{appname} || die "Assert";
 }
 
 sub do_help {
@@ -183,7 +194,7 @@ sub do_push {
 sub do_delete {
     $USAGE = "delete";
     usage() if @ARGV;
-    my $info = get_info();
+    my $info = get_info(1);
     stackato_run("delete", $info->{appname});
     unlink($info->{appfile});
 }
