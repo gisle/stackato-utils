@@ -233,6 +233,28 @@ sub do_open {
     ActiveState::Browser::open($uri);
 }
 
+sub _dbi {
+    usage() if @ARGV > 1;
+    my $info = get_info();
+    require Stackato::DBI;
+    my($dsn, $user, $pass) = Stackato::DBI->credentials(shift(@ARGV), $info->{deployed}{services_connect_info});
+    return $dsn, $user, $pass;
+}
+
+sub do_dbi {
+    $USAGE = "dbi [<service>]";
+    print join(" ", _dbi()), "\n";
+}
+
+sub do_dbish {
+    $USAGE = "dbish [<service>]";
+    my $dbish = find_prog("dbish");
+    unless ($dbish) {
+	die "Can't locate the dbish command; you can install it with 'ppm install DBI::Shell'";
+    }
+    exec $dbish, _dbi();
+}
+
 sub do_target {
     $_ = stackato_json("target");
     print $_->{target}, "\n";
