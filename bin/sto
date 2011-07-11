@@ -260,7 +260,6 @@ sub do_dbshell {
     usage() if @ARGV > 1;
     require Stackato::Services;
     my $conn_info = stackato_json("service-conn", get_appname(), @ARGV);
-    use Data::Dump; dd $conn_info;
     my $cred = $conn_info->{credentials};
 
     my @cmd;
