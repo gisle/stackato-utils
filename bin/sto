@@ -223,6 +223,16 @@ sub do_run {
     stackato_run("run", get_appname(), @ARGV);
 }
 
+sub do_open {
+    $USAGE = "open";
+    usage() if @ARGV;
+    my $info = get_info();
+    my $uri = $info->{deployed}{uris}[0];
+    $uri = "http://" . $uri unless $uri =~ s/^https?://;
+    require ActiveState::Browser;
+    ActiveState::Browser::open($uri);
+}
+
 sub do_target {
     $_ = stackato_json("target");
     print $_->{target}, "\n";
