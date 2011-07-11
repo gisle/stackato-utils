@@ -255,6 +255,43 @@ sub do_dbish {
     exec $dbish, _dbi();
 }
 
+sub do_dbshell {
+    $USAGE = "dbshell [<service>]";
+    usage() if @ARGV > 1;
+    require Stackato::Services;
+    my $conn_info = stackato_json("service-conn", get_appname(), @ARGV);
+    use Data::Dump; dd $conn_info;
+    my $cred = $conn_info->{credentials};
+
+    my @cmd;
+    if ($conn_info->{label} =~ /^mysql/) {
+	@cmd = (
+	    "mysql",
+	    "-h", $cred->{hostname}, "--port", $cred->{port},
+	    "-u", $cred->{user}, "-p$cred->{password}",
+	    $cred->{name});
+    }
+    elsif ($conn_info->{lable} =~ /^postgresql/) {
+	@cmd = (
+	    "psql", "-w",
+	    "-l", $cred->{hostname}, "-p", $cred->{port},
+	    "-U", $cred->{user},
+	    "-d", $cred->{name},
+	);
+	$ENV{PGPASSWORD} = $cred->{password};
+    }
+    else {
+	die "Don't know how to connect to $conn_info->{label}";
+    }
+
+    my $prog = find_prog($cmd[0]);
+    unless ($prog) {
+	die "Can't find the $cmd[0] command";
+    }
+    $cmd[0] = $prog;
+    exec(@cmd);
+}
+
 sub do_target {
     $_ = stackato_json("target");
     print $_->{target}, "\n";
@@ -284,8 +321,9 @@ The following commands sub-commands are recognized:
 
 =item B<sto dbi> [ I<service> ]
 
-Prints the parameters that Perl's DBI need to connect to a database.  The 3
-values printed are the DSN, the username and the password.
+Prints the parameters that Perl's DBI need to connect to a database for the
+current application.  The 3 values printed are the DSN, the username and the
+password.
 
 If I<service> is provided print parameters for that database.  If not select
 the first relational database service.
@@ -294,6 +332,14 @@ the first relational database service.
 
 Invoke the C<dbish> for the given I<service>.  The C<dbish> is an interactive
 shell where you can send SQL commands to the database and see the results.
+
+=item B<sto dbshell> [ I<service> ]
+
+Invoke the native shell command for the database of the current application.
+This is similar to dbish but you get a shell that is database specific.
+
+Unlike B<sto dbish> this command require I<service> to be specified if you
+have bound multiple services to the current application.
 
 =item B<sto delete>
 
