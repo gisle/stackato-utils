@@ -8,6 +8,7 @@ use Stackato::AppInfo qw(dot_stackato);
 
 (my $PROGNAME = $0) =~ s,.*[\\/],,;
 my $STACKATO_CMD;
+my $DEBUG;
 
 my $CMD = shift || usage();
 $CMD = "version" if $CMD eq "--version";
@@ -86,7 +87,11 @@ sub stackato_json {
     require JSON;
     open(my $fh, "$STACKATO_CMD --json " . shell_quote(@_) . "|");
     local $/;
-    return JSON::decode_json(scalar <$fh>);
+    my $info = eval {
+	JSON::decode_json(scalar <$fh>);
+    };
+    warn $@ if $DEBUG && $@;
+    return $info;
 }
 
 sub get_info {
@@ -259,7 +264,7 @@ sub do_dbshell {
     $USAGE = "dbshell [<service>]";
     usage() if @ARGV > 1;
     require Stackato::Services;
-    my $conn_info = stackato_json("service-conn", get_appname(), @ARGV);
+    my $conn_info = stackato_json("service-conn", get_appname(), @ARGV) || return;
     my $cred = $conn_info->{credentials};
 
     my @cmd;
