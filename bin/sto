@@ -1,0 +1,124 @@
+#!perl
+
+use strict;
+
+(my $PROGNAME = $0) =~ s,.*[\\/],,;
+
+my $CMD = shift || usage();
+$CMD = "version" if $CMD eq "--version";
+
+my $do_cmd = "do_$CMD";
+unless (defined &$do_cmd) {
+    require Text::Abbrev;
+    my @cmds;
+    for my $name (keys %main::) {
+        push(@cmds, $name) if $name =~ s/^do_//;
+    }
+    my $abbrev = Text::Abbrev::abbrev(@cmds);
+    if (my $cmd = $abbrev->{$CMD}) {
+        $do_cmd = "do_$cmd";
+    }
+    else {
+        require Text::Wrap;
+        usage(Text::Wrap::wrap("", "  ",
+                  "Unrecognized $PROGNAME command '$CMD'; try one of " .
+                  join(", ", sort @cmds)
+              )
+        );
+    }
+}
+
+eval {
+    no strict 'refs';
+    &$do_cmd;
+};
+if ($@) {
+    print STDERR "$PROGNAME $CMD failed: " . clean_err($@) . "\n";
+    exit 1;
+}
+else {
+    exit;
+}
+
+my $USAGE;
+sub usage {
+    my $msg = shift;
+    if ($msg) {
+        $msg .= "\n" unless $msg =~ /\n$/;
+        print STDERR $msg;
+    }
+    $USAGE ||= "<cmd> <arg>...";
+    print STDERR "Usage:\t$PROGNAME $USAGE\n";
+    print STDERR "\tRun '$PROGNAME help" . ($USAGE =~ /^(\w+)/ ? " $1" : "") . "' to learn more.\n";
+    exit 1;
+}
+
+sub do_help {
+    if (@ARGV > 1) {
+        $USAGE = "help [<subcommand>]";
+        usage();
+    }
+    my $pod2text = qq("$^X" -MPod::Text -e "Pod::Text->new->parse_from_filehandle");
+    my $pager = $ENV{PAGER} || "more";
+    open(my $fh, "<", __FILE__) || die "Can't open " . __FILE__ . ": $!";
+    if (@ARGV) {
+        my $cmd = shift(@ARGV);
+        my $foundit;
+        while (<$fh>) {
+            if (/^=item B<$PROGNAME \Q$cmd\E\b/o) {
+                $foundit++;
+                last;
+            }
+        }
+        if ($foundit) {
+            open(my $out, "| $pod2text | $pager");
+            print $out "=over\n\n";
+            print $out $_;
+            my $over_depth = 0;
+            while (<$fh>) {
+                last if /^=item B<$PROGNAME (?!\Q$cmd\E\b)/o;
+                if (/^=back\b/) {
+                    last if $over_depth == 0;
+                    $over_depth--;
+                }
+                elsif (/^=over\b/) {
+                    $over_depth++;
+                }
+                print $out $_;
+            }
+            print $out "\n\n=back\n";
+            close($out);
+        }
+        else {
+            print "Sorry, no help for '$cmd'\n";
+        }
+    }
+    else {
+        open(my $out, qq(| $pod2text | $pager));
+        while (<$fh>) {
+            print $out $_;
+        }
+        close($out);
+    }
+}
+
+sub do_version {
+    require Stackato::Utils;
+    print "$PROGNAME $Stackato::Utils::VERSION\n";
+}
+
+__END__
+
+=head1 NAME
+
+sto - Stackato command line interface (alternative edition)
+
+=head1 DESCRIPTION
+
+The C<sto> command is a wrapper for the Stackato command line client C<stackato>.
+The C<stackato> command have chosen to stay compatible with "vmc" (the Cloud
+Foundery client), while C<sto> just does what Gisle found conveinient.
+
+=head1 SEE ALSO
+
+L<http://www.activestate.com/stackato>
