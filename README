@@ -1,0 +1,4 @@
+This dist contains helper modules and scripts to work with ActiveState's Stackato PaaS.
+http://www.activestate.com/cloud
+
+ActivePerl 5.12 or better required to install.
