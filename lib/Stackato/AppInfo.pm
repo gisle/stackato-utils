@@ -33,7 +33,6 @@ sub dot_stackato {
 
     my $dir = Cwd::cwd();
     while (1) {
-	print "$dir\n";
 	my $filename = "$dir/$DOT_STACKATO";
 	if (open(my $fh, "<", $filename)) {
 	    my $data = JSON::decode_json(do { local $/; scalar <$fh> });
