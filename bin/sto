@@ -1,8 +1,10 @@
 #!perl
 
 use strict;
+use ActiveState::Path qw(find_prog);
 
 (my $PROGNAME = $0) =~ s,.*[\\/],,;
+my $STACKATO_CMD;
 
 my $CMD = shift || usage();
 $CMD = "version" if $CMD eq "--version";
@@ -51,6 +53,17 @@ sub usage {
     print STDERR "Usage:\t$PROGNAME $USAGE\n";
     print STDERR "\tRun '$PROGNAME help" . ($USAGE =~ /^(\w+)/ ? " $1" : "") . "' to learn more.\n";
     exit 1;
+}
+
+sub clean_err {
+    return $_[0];
+}
+
+sub stackato_cmd {
+    unless ($STACKATO_CMD) {
+	$STACKATO_CMD = find_prog("stackato") || die "Abort: Can't find stackato command\n";
+    }
+    system($STACKATO_CMD, @_);
 }
 
 sub do_help {
@@ -105,6 +118,7 @@ sub do_help {
 sub do_version {
     require Stackato::Utils;
     print "$PROGNAME $Stackato::Utils::VERSION\n";
+    stackato_cmd("version");
 }
 
 __END__
