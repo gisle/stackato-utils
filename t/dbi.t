@@ -7,7 +7,7 @@ BEGIN {
 }
 
 use Test;
-plan tests => 3;
+plan tests => 6;
 
 use Stackato::DBI;
 
@@ -15,3 +15,8 @@ my($dsn, $user, $pass) = Stackato::DBI->credentials;
 ok($dsn, "dbi:mysql:database=da88bc1216972477a84cb653ab164495d;host=127.0.0.1;port=3306");
 ok($user, "uhCNWldTvLmyL");
 ok($pass, "pLciNE6donyPM");
+
+($dsn, $user, $pass) = Stackato::DBI->credentials("xx2");
+ok($dsn, "dbi:mysql:database=d4f9291f55f7c4b558fae00e0fcd1bc9e;host=127.0.0.1;port=3306");
+ok($user, "utODG6N0ryZVL");
+ok($pass, "pftr3azRh0dUg");

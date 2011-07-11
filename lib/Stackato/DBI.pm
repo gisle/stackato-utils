@@ -2,6 +2,7 @@ package Stackato::DBI;
 
 use strict;
 use JSON qw(decode_json);
+use Stackato::Services;
 
 sub connect {
     my $class = shift;
@@ -21,26 +22,15 @@ sub credentials {
 	# Find the one to use
 	my $selected;
 	if ($service) {
-	    for (@services) {
-		if ($service eq $_->{name}) {
-		    $selected = $_;
-		    last;
-		}
-	    }
-	    unless ($selected) {
-		die "No service named '$service' found"
-	    }
+	    $selected = Stackato::Services::get_service(\@services, $service)
+	        || die "No service named '$service' found"
 	}
 	else {
-	    for (@services) {
-		if (grep /^(mysql|pg)$/, @{$_->{tags}}) {
-		    $selected = $_;
-		    last;
-		}
-	    }
-	    unless ($selected) {
+	    my @cand = Stackato::Services::filter(\@services, tags => "relational");
+	    unless (@cand) {
 		die "No DBI supported service found";
 	    }
+	    $selected = $cand[0];
 	}
 	die "No service found" unless $selected;
 
@@ -48,6 +38,7 @@ sub credentials {
 	my $cred = $selected->{credentials} || die "No credentials given for $selected->{name}";
 	my $driver = $selected->{label};
 	$driver = "mysql" if $driver =~ /^mysql\b/;
+	$driver = "pg" if $driver =~ /^postgresql\b/;
 
 	my $dsn = "dbi:$driver:database=$cred->{name};host=$cred->{hostname};port=$cred->{port}";
 	return ($dsn, $cred->{user}, $cred->{password});
