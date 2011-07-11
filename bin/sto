@@ -2,6 +2,9 @@
 
 use strict;
 use ActiveState::Path qw(find_prog);
+use ActiveState::Run qw(shell_quote);
+use Stackato::AppInfo qw(dot_stackato);
+
 
 (my $PROGNAME = $0) =~ s,.*[\\/],,;
 my $STACKATO_CMD;
@@ -56,14 +59,42 @@ sub usage {
 }
 
 sub clean_err {
-    return $_[0];
+    my $err = shift;
+    # $err =~ s/ at .*//s;
+    $err =~ s/ _at / at /g; # escape for when you really want "at" in the message
+    $err =~ s/\n*\z//;
+    return $err;
 }
 
-sub stackato_cmd {
+sub _stackato_cmd {
     unless ($STACKATO_CMD) {
 	$STACKATO_CMD = find_prog("stackato") || die "Abort: Can't find stackato command\n";
     }
-    system($STACKATO_CMD, @_);
+}
+
+sub stackato_run {
+    die "Assert" unless @_;
+    _stackato_cmd();
+    my @ARGV = @_;
+    print ">>> $STACKATO_CMD @ARGV\n" unless $ARGV[0] =~ s/^\@//;
+    system($STACKATO_CMD, @ARGV);
+}
+
+sub stackato_json {
+    die "Assert" unless @_;
+    _stackato_cmd();
+    require JSON;
+    open(my $fh, "$STACKATO_CMD --json " . shell_quote(@_) . "|");
+    local $/;
+    return JSON::decode_json(scalar <$fh>);
+}
+
+sub get_info {
+    return dot_stackato() || die "No stackato app pushed from this directory";
+}
+
+sub get_appname {
+    return get_info()->{appname} || die "Assert";
 }
 
 sub do_help {
@@ -115,10 +146,57 @@ sub do_help {
     }
 }
 
+sub do_info {
+    my $info = get_info();
+    use Data::Dump;
+    dd $info;
+}
+
+sub do_push {
+    $USAGE = "push [<appname>]";
+    my $info = dot_stackato();
+    if ($info) {
+	if (@ARGV) {
+	    my $appname = shift(@ARGV);
+	    usage() if @ARGV;
+	    if ($appname ne $info->{appname}) {
+		# rename
+		stackato_run("rename", $info->{appname}, $appname);
+		$info->{appname} = $appname;
+		dot_stackato($info);  # save it
+		return;
+	    }
+	}
+	stackato_run("update", $info->{appname});
+    }
+    else {
+	my $appname = shift(@ARGV) || usage();
+	usage() if @ARGV;
+	stackato_run("push", $appname);
+	dot_stackato({
+	    appname => $appname,
+	    target => stackato_json("target")->{target},
+	});
+    }
+}
+
+sub do_delete {
+    $USAGE = "delete";
+    usage() if @ARGV;
+    my $info = get_info();
+    stackato_run("delete", $info->{appname});
+    unlink($info->{appfile});
+}
+
+sub do_target {
+    $_ = stackato_json("target");
+    print $_->{target}, "\n";
+}
+
 sub do_version {
     require Stackato::Utils;
     print "$PROGNAME $Stackato::Utils::VERSION\n";
-    stackato_cmd("version");
+    stackato_run("\@version");
 }
 
 __END__
