@@ -188,6 +188,30 @@ sub do_delete {
     unlink($info->{appfile});
 }
 
+sub do_start {
+    $USAGE = "start";
+    usage() if @ARGV;
+    stackato_run("start", get_appname());
+}
+
+sub do_stop {
+    $USAGE = "stop";
+    usage() if @ARGV;
+    stackato_run("stop", get_appname());
+}
+
+sub do_status {
+    $USAGE = "stop";
+    usage() if @ARGV;
+    stackato_run("stats", get_appname());
+}
+
+sub do_run {
+    $USAGE = "run <cmd> [<arg>...]";
+    usage() if @ARGV < 1;
+    stackato_run("run", get_appname(), @ARGV);
+}
+
 sub do_target {
     $_ = stackato_json("target");
     print $_->{target}, "\n";
