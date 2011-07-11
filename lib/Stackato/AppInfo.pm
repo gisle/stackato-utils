@@ -3,21 +3,13 @@ package Stackato::AppInfo;
 use strict;
 use base qw(Exporter);
 
-our @EXPORT_OK = qw(app_name app_info dot_stackato);
+our @EXPORT_OK = qw(dot_stackato);
 
 use JSON ();
 use Cwd ();
 use File::Basename qw(dirname);
 
 my $DOT_STACKATO = ".stackato.json";
-
-sub app_name {
-    return $ENV{STACKATO_APPNAME} || app_info()->{appname};
-}
-
-sub app_info {
-    return dot_stackato() || die "No app-state stored in this directory (or its parents)"
-}
 
 sub dot_stackato {
     if (@_) {
